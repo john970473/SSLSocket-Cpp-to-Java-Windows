@@ -1,0 +1,78 @@
+package ssl;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.KeyStore;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManagerFactory;
+
+public class SSLClient {
+	private SSLSocket sslSocket;
+	public static void main(String[] args) throws Exception {
+		SSLClient client = new SSLClient();
+		client.init();
+		System.out.println("SSLClient initialized.");
+		client.process();
+	}
+	
+	//客户端将要使用到client.keystore和ca-trust.keystore
+	public void init() throws Exception {
+		String host = "127.0.0.1";
+		int port = 1234;
+		String keystorePath = "client.keystore";
+		String trustKeystorePath = "ca-trust.keystore";
+		String keystorePassword = "111111";
+		SSLContext context = SSLContext.getInstance("TLS");
+		//客户端证书库
+		KeyStore clientKeystore = KeyStore.getInstance("pkcs12");
+		FileInputStream keystoreFis = new FileInputStream(keystorePath);
+		clientKeystore.load(keystoreFis, keystorePassword.toCharArray());
+		//信任证书库
+		KeyStore trustKeystore = KeyStore.getInstance("jks");
+		FileInputStream trustKeystoreFis = new FileInputStream(trustKeystorePath);
+		trustKeystore.load(trustKeystoreFis, keystorePassword.toCharArray());
+		
+		//密钥库
+		KeyManagerFactory kmf = KeyManagerFactory.getInstance("sunx509");
+		kmf.init(clientKeystore, keystorePassword.toCharArray());
+
+		//信任库
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance("sunx509");
+		tmf.init(trustKeystore);
+		
+		//初始化SSL上下文
+		context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+		
+		sslSocket = (SSLSocket)context.getSocketFactory().createSocket(host, port);
+	}
+	
+	public void process() throws Exception {
+		//往SSLSocket中写入数据
+		String hello = "hello boy!";
+		
+		DataOutputStream out = new DataOutputStream(sslSocket.getOutputStream());
+		out.writeUTF(hello);
+		
+		DataInputStream in = new DataInputStream(sslSocket.getInputStream());
+		String recv;
+		recv = in.readUTF();
+		
+		System.out.println(recv);
+		sslSocket.close();
+		//OutputStream out = sslSocket.getOutputStream();
+		//out.write(hello.getBytes(), 0, hello.getBytes().length);
+		//out.flush();
+		
+		//从SSLSocket中读取数据
+		//InputStream in = sslSocket.getInputStream();
+		//byte[] buffer = new byte[50];
+		//in.read(buffer);
+		
+	}
+}

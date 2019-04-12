@@ -1,0 +1,76 @@
+package ssl;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.security.KeyStore;
+import java.util.Arrays;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.TrustManagerFactory;
+
+public class SSLServer {
+	private SSLServerSocket sslServerSocket;
+	public static void main(String[] args) throws Exception {
+		SSLServer server = new SSLServer();
+		server.init(1234,"ca-trust.keystore","server.keystore","111111");
+		System.out.println("SSLServer initialized.");
+
+		String msg;
+		int kk;
+		while(true) {
+			Socket socket = server.accept();
+			msg = new String();
+			DataInputStream in = new DataInputStream(socket.getInputStream());
+			msg = in.readUTF();
+			System.out.println("Received: " + msg );
+			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+			out.writeUTF(msg+"hahaha");
+			kk = in.readInt();
+			System.out.println("Received int: " + kk );
+			out.writeInt(kk);
+		}
+		
+	}
+	
+	//服务器端将要使用到server.keystore和ca-trust.keystore
+	public void init(int port, String trustKeystorePath, String keystorePath, String keystorePassword) throws Exception {
+		//SSLContext context = SSLContext.getInstance("SSLv3");
+		SSLContext context = SSLContext.getInstance("TLS");
+		
+		//客户端证书库
+		KeyStore keystore = KeyStore.getInstance("pkcs12");
+		FileInputStream keystoreFis = new FileInputStream(keystorePath);
+		keystore.load(keystoreFis, keystorePassword.toCharArray());
+		//信任证书库
+		KeyStore trustKeystore = KeyStore.getInstance("jks");
+		FileInputStream trustKeystoreFis = new FileInputStream(trustKeystorePath);
+		trustKeystore.load(trustKeystoreFis, keystorePassword.toCharArray());
+		
+		//密钥库
+		KeyManagerFactory kmf = KeyManagerFactory.getInstance("sunx509");
+		kmf.init(keystore, keystorePassword.toCharArray());
+
+		//信任库
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance("sunx509");
+		tmf.init(trustKeystore);
+		
+		//初始化SSL上下文
+		context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+		//初始化SSLSocket
+		sslServerSocket = (SSLServerSocket)context.getServerSocketFactory().createServerSocket(port);
+		//设置这个SSLServerSocket需要授权的客户端访问
+		sslServerSocket.setNeedClientAuth(true);
+	}
+	
+	public Socket accept() throws Exception{
+		return sslServerSocket.accept();
+	}
+	
+	
+}

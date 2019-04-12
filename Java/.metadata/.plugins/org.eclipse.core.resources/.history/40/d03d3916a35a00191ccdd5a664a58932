@@ -1,0 +1,73 @@
+package ssl;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.KeyStore;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManagerFactory;
+
+public class SSLClient {
+	private SSLSocket sslSocket;
+	public static void main(String[] args) throws Exception {
+		SSLClient client = new SSLClient();
+		client.init("127.0.0.1", 1234, "ca-trust.keystore", "client.keystore", "111111");
+		System.out.println("SSLClient initialized.");
+		
+		SSLSocket ssl = client.connect();
+		
+		String hello = "hello boy!";
+		
+		DataOutputStream out = new DataOutputStream(ssl.getOutputStream());
+		out.writeUTF(hello);
+		
+		DataInputStream in = new DataInputStream(ssl.getInputStream());
+		String recv;
+		recv = in.readUTF();
+		
+		System.out.println(recv);
+		
+		out.writeInt(4296);
+		
+		int num = in.readInt();
+		
+		System.out.println(num);
+		
+		ssl.close();
+	}
+	
+	//客户端将要使用到client.keystore和ca-trust.keystore
+	public void init(String host, int port, String trustKeystorePath, String keystorePath, String keystorePassword) throws Exception {
+		SSLContext context = SSLContext.getInstance("TLS");
+		//客户端证书库
+		KeyStore clientKeystore = KeyStore.getInstance("pkcs12");
+		FileInputStream keystoreFis = new FileInputStream(keystorePath);
+		clientKeystore.load(keystoreFis, keystorePassword.toCharArray());
+		//信任证书库
+		KeyStore trustKeystore = KeyStore.getInstance("jks");
+		FileInputStream trustKeystoreFis = new FileInputStream(trustKeystorePath);
+		trustKeystore.load(trustKeystoreFis, keystorePassword.toCharArray());
+		
+		//密钥库
+		KeyManagerFactory kmf = KeyManagerFactory.getInstance("sunx509");
+		kmf.init(clientKeystore, keystorePassword.toCharArray());
+
+		//信任库
+		TrustManagerFactory tmf = TrustManagerFactory.getInstance("sunx509");
+		tmf.init(trustKeystore);
+		
+		//初始化SSL上下文
+		context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+		
+		sslSocket = (SSLSocket)context.getSocketFactory().createSocket(host, port);
+	}
+	
+	public SSLSocket connect() throws Exception {
+		return sslSocket;
+	}
+}

@@ -1,0 +1,41 @@
+package ssl;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.security.KeyStore;
+import java.util.Arrays;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.TrustManagerFactory;
+
+public class SSLServerTest {
+	private SSLServerSocket sslServerSocket;
+	public static void main(String[] args) throws Exception {
+		SSLServer server = new SSLServer();
+		server.init(1234,"ca-trust.keystore","server.keystore","111111");
+		System.out.println("SSLServer initialized.");
+
+		String msg;
+		int kk;
+		while(true) {
+			Socket socket = server.accept();
+			msg = new String();
+			DataInputStream in = new DataInputStream(socket.getInputStream());
+			msg = in.readUTF();
+			System.out.println("Received: " + msg );
+			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+			out.writeUTF(msg+"hahaha");
+			kk = in.readInt();
+			System.out.println("Received int: " + kk );
+			out.writeInt(kk);
+		}
+		
+	}
+	
+}
